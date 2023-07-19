@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: 'MyFont';
+    src: url(/Herey_Script.ttf);
+}
+
+body { 
+    font-family: 'MyFont';
+}
+
+.brand { 
+    font-size: 66px;
+    color: #5F44CF;
+    text-shadow: 10px 10px 6px hsl(0, 0%, 0% , 16%);
+}
+
+.nav { 
+    width: 80%;
+    margin: 0 auto;
+    padding: 2rem;
+    
+}
+
+.flex-container { 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* nav button  */
+.btn { 
+    border: 1px solid #5F44CF;
+    border-radius: 20px;
+    display: inline-block;
+    width: 150px;
+    height: 50px;
+    padding: 0.3rem;
+    text-align: center;
+    margin-right: 22px;
+    font-size: 30px;
+    color:#5F44CF;
+    box-shadow: 10px 10px 6px hsl(0, 0%, 0% , 16%);
+    
+}
+
+
+.hero { 
+    height: calc(100vh - 163px);
+    background-color: #5F44CF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.container { 
+    display: flex;
+    flex-direction: column;
+    font-size: 90px;
+}
+
+.belowp { 
+    margin-left: 100px;
+}
+
+
+/* dashboard  */
+
+.dash-btn { 
+    border: 2px solid #8f7ddb;
+}
+
+.dash-input { 
+    background-color: transparent;
+}
+.gap { 
+    gap: 30px;
+}
+
+video { 
+    height: 500px;
+    width: 50%;
+    
+}
