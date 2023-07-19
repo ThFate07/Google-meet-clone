@@ -2,12 +2,27 @@
 import { useEffect, useState } from "react"
 import {io} from 'socket.io-client';
 import { useParams } from "react-router-dom";
+import ProtectedCompnent from './ProtectedCompnent'
 
-function Meeting() { 
+function Meeting() {
+    const [isLogged , setIsLogged] = useState(false) 
     const [inMeeting , setInMeeting] = useState(false)
+    const {roomId} = useParams()
+    
+
+    return ( 
+        <ProtectedCompnent isLogged={isLogged} setIsLogged={setIsLogged}>
+            <JoinMetting inMeeting={inMeeting} roomId={roomId} setInMeeting={setInMeeting}/>
+        </ProtectedCompnent>
+    )
+}
+
+
+function JoinMetting({inMeeting ,setInMeeting , roomId}) { 
     const [localStream , setLocalStream] = useState(null)
     const [remoteStream , setRemoteStream] = useState(new MediaStream())
-    let {roomId} = useParams()
+
+    
     const URL = 'http://localhost:4000'
     
     const servers = { 
@@ -100,36 +115,28 @@ function Meeting() {
 
     }, [inMeeting])
 
-    return ( 
-        <JoinMetting inMeeting={inMeeting} roomId={roomId} setInMeeting={setInMeeting}>
 
+    if (inMeeting) { 
+
+        return (
             <div className="background gap">
                 <video id="user-1" autoPlay playsInline></video>
                 <video id="user-2" autoPlay playsInline></video>
-                
             </div>
-        </JoinMetting>
-    )
-}
-
-
-function JoinMetting({inMeeting ,setInMeeting , roomId ,  children}) { 
-
-    function handleClick() { 
-        setInMeeting(true)
-    }
-
-    if (inMeeting) return children 
+        )
+    } 
 
 
     return ( 
         <div className="background">
             <div>
                 <p>Welcome to meeting {roomId}</p>
-                <button className="dash-btn" onClick={handleClick}>Join Meeting</button>
+                <button className="dash-btn" onClick={() => setInMeeting(true)}>Join Meeting</button>
             </div>
 
         </div>
     )
 }
+
+
 export default Meeting

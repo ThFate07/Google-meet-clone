@@ -75,6 +75,9 @@ body {
 
 .dash-input { 
     background-color: transparent;
+    border-bottom: 2px solid #8f7ddb;
+    margin-right: 10px;
+    outline: none;
 }
 .gap { 
     gap: 30px;
@@ -84,4 +87,18 @@ video {
     height: 500px;
     width: 50%;
     
+}
+
+/* protected component  */
+
+.normal { 
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.normal a { 
+    text-decoration: underline;
 }

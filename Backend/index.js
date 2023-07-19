@@ -55,8 +55,6 @@ app.post('/login' , async  (req , res ) => {
         return;
     }
 
-    console.log(logginUser)
-
     if (logginUser.password !== password) {
         res.status(403).json({message : 'invalid password'})
         return;
@@ -69,17 +67,41 @@ app.post('/login' , async  (req , res ) => {
 })
 
 // add is login authentication 
+const authMiddleWare = (req , res , next) => {
+    const token = req.headers.authorization;
+
+    if (!token) { 
+        res.status(404).json({message : 'no token provided'})
+        return; 
+    }
+
+    jwt.verify(token , secretKeyUser, (error , decryptedInfo) => { 
+        if (error) { 
+            res.status(404).json({message : 'login expired or invalid token'})
+            return;
+        }
+
+        next()
+    })
+
+}
+
+app.post('/auth' , authMiddleWare , (req , res) => { 
+    res.status(200).json({message: 'successfully logged in.'})
+})
+
 // create meeting room
-app.post('/create-meeting' , (req , res ) => { 
+app.post('/create-meeting' , authMiddleWare , (req , res ) => { 
     let roomId = Math.ceil(Math.random() * 10000 )
 
     res.status(201).json({message : 'Created meeting room' , id : roomId})
 })
 
 // joining meeting room
-app.post('/existing-meeting' , (req , res ) => { 
+app.get('/existing-meeting' , authMiddleWare , (req , res ) => { 
     
 })
+
 app.listen(3000 , () => { 
     console.log('started listening on port 3000')
 })
