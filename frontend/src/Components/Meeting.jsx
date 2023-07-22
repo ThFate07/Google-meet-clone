@@ -38,7 +38,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
         
         peerConnection.onicecandidate = (event) => { 
             if (event.candidate) { 
-                socket.emit('sdp-offer' , peerConnection.localDescription)
+                socket.emit('sdp-offer' , peerConnection.localDescription , roomId)
             }
         }
 
@@ -52,7 +52,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
 
             peerConnection.onicecandidate = (event) => { 
                 if (event.candidate) { 
-                    socket.emit('sdp-answer' , peerConnection.localDescription)
+                    socket.emit('sdp-answer' , peerConnection.localDescription , roomId)
                 }
             }
 
@@ -86,7 +86,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
 
         if (inMeeting) { 
 
-            socket.emit('joined')
+            socket.emit('joined', roomId)
     
             socketEvents(socket , peerConnection)
         }
