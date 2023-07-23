@@ -22,6 +22,8 @@ io.on('connection' , (socket) => {
     socket.on('joined' ,(roomId) => {
         const isRoom = findRoom(roomId)
 
+        socket.roomId = roomId
+
         if (!isRoom) { 
             rooms.push({
                 roomId,
@@ -40,10 +42,24 @@ io.on('connection' , (socket) => {
             console.log("couldn't esatablish connection as users in room exceed 2")
         }
 
-        
     })
     
     socket.on('disconnect' , () => { 
+        const room = findRoom(socket.roomId)
+
+        try { 
+
+            room.users.splice(room.users.indexOf(socket.id) , 1)
+            // delete room if everyone left
+            if (room.users.lenght === 0) { 
+                rooms.slice(rooms.indexOf(room) , 1)
+            }
+            
+            socket.broadcast.to(room.users[0]).emit('disconnected')
+        } catch { 
+            
+        }
+
         console.log('socket disconnected')
     })
 
@@ -51,6 +67,7 @@ io.on('connection' , (socket) => {
         const room = findRoom(roomId)
         const userToSend = room.users[1]
 
+        console.log('sent offer')
         socket.broadcast.to(userToSend).emit('sdp-offer' , offer)
     })
 
@@ -58,6 +75,7 @@ io.on('connection' , (socket) => {
         const room = findRoom(roomId)
         const userToSend = room.users[0]
 
+        console.log('recived answer')
         socket.broadcast.to(userToSend).emit('sdp-answer' , answer)
     })
 

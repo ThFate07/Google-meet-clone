@@ -20,7 +20,6 @@ function ProtectedComponent({isLogged , setIsLogged, children}) {
 
     }, [token])
 
-    console.log(isLogged)
     if (isLogged) { 
         return children
     }

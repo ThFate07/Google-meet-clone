@@ -1,8 +1,11 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react"
 import {io} from 'socket.io-client';
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import ProtectedCompnent from './ProtectedCompnent'
+import cameraLogo from '/icons/camera.png'
+import micLogo from '/icons/mic.png'
+import phoneLogo from '/icons/phone.png'
 
 function Meeting() {
     const [isLogged , setIsLogged] = useState(false) 
@@ -20,11 +23,64 @@ function Meeting() {
 
 function JoinMetting({inMeeting ,setInMeeting , roomId}) { 
     const [localStream , setLocalStream] = useState(null)
-    const [remoteStream , setRemoteStream] = useState(new MediaStream())
 
-    
-    const URL = 'http://localhost:4000'
-    
+    const style = {   
+        height: "500px",
+        width: "50%",
+        backgroundColor: "black"
+    }
+
+    async function init() { 
+        setLocalStream(await navigator.mediaDevices.getUserMedia({video : true, audio: false})) 
+    }
+
+    useEffect(() => { 
+        
+        init()
+
+    }, [inMeeting])
+
+
+    if (inMeeting) return  <ViewMeeting localStream={localStream} setLocalStream={setLocalStream} roomId={roomId} />
+
+
+    return ( 
+        <div className="background">
+            <div style={{
+                display: "flex",
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '30px'
+            }}>
+                <div>
+                    <p>Hair check.</p>
+                    <Video localStream={localStream} style={style} givenId={'check-hair'}/>
+                    <button onClick={() => init()}>Use Cam</button>
+                </div>
+                <div>
+
+                    <p>Welcome to meeting {roomId}</p>
+                    <button className="dash-btn" onClick={() => setInMeeting(true)}>Join Meeting</button>
+                </div>
+            </div>
+
+        </div>
+    )
+}
+
+function Video({localStream, style , givenId}) { 
+
+
+    useEffect(() => { 
+        document.getElementById(givenId).srcObject = localStream;
+    }, [localStream])
+
+    return <video id={givenId} style={style} autoPlay playsInline></video>
+}
+
+
+function ViewMeeting({localStream, setLocalStream, roomId}) { 
+    const [remoteStream , setRemoteStream] = useState(new MediaStream())
     const servers = { 
         iceServers : [
           {
@@ -32,10 +88,15 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
           }
         ]
     }
+    const peerConnection = new RTCPeerConnection(servers)
+    const URL = 'http://localhost:4000'
+    const socket = io(URL)
+    
+
 
     async function createOffer(socket , peerConnection) { 
         
-        
+
         peerConnection.onicecandidate = (event) => { 
             if (event.candidate) { 
                 socket.emit('sdp-offer' , peerConnection.localDescription , roomId)
@@ -47,6 +108,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
     }
 
     function socketEvents(socket , peerConnection) { 
+
         socket.on('sdp-offer' , async (offer) => { 
             await peerConnection.setRemoteDescription(offer)
 
@@ -63,10 +125,11 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
             peerConnection.getReceivers().forEach(reciver => { 
                 remoteStream.addTrack(reciver.track)
             })
+            setRemoteStream(remoteStream)
         })
 
         socket.on('joined' ,() => { 
-            console.log('a user has joined')
+            document.getElementById('user-2').style.display = 'inline'
             createOffer(socket , peerConnection)
         })
     
@@ -76,67 +139,58 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
                 peerConnection.getReceivers().forEach(reciver => { 
                     remoteStream.addTrack(reciver.track)
                 })
+                setRemoteStream(remoteStream)
             })
         })
+
+        socket.on('disconnected', () => { 
+            peerConnection.close()
+        })
+
     }
 
     async function init() { 
-        const peerConnection = new RTCPeerConnection(servers)
-        const socket = io(URL)
-
-        if (inMeeting) { 
-
-            socket.emit('joined', roomId)
+        socket.emit('joined', roomId)
+        socketEvents(socket , peerConnection)
     
-            socketEvents(socket , peerConnection)
-        }
-
-
-
-        setLocalStream(await navigator.mediaDevices.getUserMedia({video : true, audio: false}))
-
-        document.getElementById('user-1').srcObject = localStream;
-        document.getElementById('user-2').srcObject = remoteStream;
-
         localStream.getTracks().forEach(track => { 
             peerConnection.addTrack(track , localStream)
         })
 
-        
-
     }
-
 
     useEffect(() => { 
         
-
         init()
-        
 
-    }, [inMeeting])
+    }, [])
 
+    function handleDisconnect() { 
+        peerConnection.close()
+        socket.emit('disconnect')
+    }
+    
+    return (
+        <div className="">
 
-    if (inMeeting) { 
-
-        return (
-            <div className="background gap">
-                <video id="user-1" autoPlay playsInline></video>
-                <video id="user-2" autoPlay playsInline></video>
+            <div className=" background gap">
+                <Video localStream={localStream} givenId={'user-1'}/>
+                <Video localStream={remoteStream} givenId={'user-2'}/>
             </div>
-        )
-    } 
-
-
-    return ( 
-        <div className="background">
-            <div>
-                <p>Welcome to meeting {roomId}</p>
-                <button className="dash-btn" onClick={() => setInMeeting(true)}>Join Meeting</button>
+            <div className="controls">
+                <div className='control-container' id="camera-btn">
+                    <img src={cameraLogo} ></img>
+                </div>
+                <div className='control-container' id="mic-btn">
+                    <img src={micLogo} ></img>
+                </div>
+                <Link to={'/dashboard'} onClick={handleDisconnect}>
+                    <div className='control-container' id="leave-btn">
+                        <img src={phoneLogo} ></img>
+                    </div>
+                </Link>
             </div>
-
         </div>
     )
 }
-
-
 export default Meeting
