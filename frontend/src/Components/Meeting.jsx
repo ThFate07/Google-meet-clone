@@ -31,7 +31,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
     }
 
     async function init() { 
-        setLocalStream(await navigator.mediaDevices.getUserMedia({video : true, audio: false})) 
+        setLocalStream(await navigator.mediaDevices.getUserMedia({video : true, audio: true})) 
     }
 
     useEffect(() => { 
@@ -91,14 +91,36 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
     const peerConnection = new RTCPeerConnection(servers)
     const URL = 'http://localhost:4000'
     const socket = io(URL)
-    
+    const [micStyle, setMicStyle] = useState({
+        backgroundColor: 'rgb(179, 102, 249, .9)'
+    }) 
 
+    const toggleCamera = async () => { 
+        let videoTrack = localStream.getTracks().find(track => track.kind === 'video')
+        
+        console.log(videoTrack.enabled, 'before')
+        videoTrack.enabled = !videoTrack.enabled
+        console.log(videoTrack.enabled, 'after')
+        
+    }
+
+    const toggleMic = async () => { 
+        let audioTrack = localStream.getTracks().find(track => track.kind === 'audio')
+        let tempStyle = {}
+        
+        audioTrack.enabled = !audioTrack.enabled   
+        tempStyle.backgroundColor = (audioTrack.enabled) ? 'rgb(179, 102, 249, .9)' : 'rgb(255, 80, 80)'
+
+        setMicStyle(tempStyle)
+       
+    }
 
     async function createOffer(socket , peerConnection) { 
         
 
         peerConnection.onicecandidate = (event) => { 
             if (event.candidate) { 
+                
                 socket.emit('sdp-offer' , peerConnection.localDescription , roomId)
             }
         }
@@ -119,40 +141,54 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
             }
 
             const answer = await peerConnection.createAnswer()
+
             await peerConnection.setLocalDescription(answer)
+            
+            const newRemoteStream = new MediaStream();
 
             // after establishing connection add video track to current window
             peerConnection.getReceivers().forEach(reciver => { 
-                remoteStream.addTrack(reciver.track)
+                newRemoteStream.addTrack(reciver.track)
             })
-            setRemoteStream(remoteStream)
+            setRemoteStream(newRemoteStream)
         })
 
         socket.on('joined' ,() => { 
-            document.getElementById('user-2').style.display = 'inline'
+            
+    
             createOffer(socket , peerConnection)
         })
     
-        socket.on('sdp-answer' ,(answer) => { 
-            peerConnection.setRemoteDescription(answer).then(() => { 
-                // after establishing connection add video track to current window
-                peerConnection.getReceivers().forEach(reciver => { 
-                    remoteStream.addTrack(reciver.track)
-                })
-                setRemoteStream(remoteStream)
-            })
+        socket.on('sdp-answer' ,(answer) => {
+
+            peerConnection.ontrack = (e) => { 
+                setRemoteStream(e.streams[0])
+            }
+
+            peerConnection.setRemoteDescription(answer) 
+           
         })
 
         socket.on('disconnected', () => { 
             peerConnection.close()
+
+            peerConnection = new RTCPeerConnection(servers);
+
+            localStream.getTracks().forEach(track => { 
+                peerConnection.addTrack(track , localStream)
+            })
+
+            setRemoteStream(new MediaStream())
         })
 
     }
 
     async function init() { 
+        
         socket.emit('joined', roomId)
         socketEvents(socket , peerConnection)
-    
+        
+        
         localStream.getTracks().forEach(track => { 
             peerConnection.addTrack(track , localStream)
         })
@@ -160,7 +196,6 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
     }
 
     useEffect(() => { 
-        
         init()
 
     }, [])
@@ -169,7 +204,7 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
         peerConnection.close()
         socket.emit('disconnect')
     }
-    
+
     return (
         <div className="">
 
@@ -178,10 +213,10 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
                 <Video localStream={remoteStream} givenId={'user-2'}/>
             </div>
             <div className="controls">
-                <div className='control-container' id="camera-btn">
+                <div className='control-container' id="camera-btn" onClick={toggleCamera}>
                     <img src={cameraLogo} ></img>
                 </div>
-                <div className='control-container' id="mic-btn">
+                <div className='control-container' id="mic-btn" onClick={toggleMic} style={micStyle}>
                     <img src={micLogo} ></img>
                 </div>
                 <Link to={'/dashboard'} onClick={handleDisconnect}>
@@ -193,4 +228,5 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
         </div>
     )
 }
+
 export default Meeting
