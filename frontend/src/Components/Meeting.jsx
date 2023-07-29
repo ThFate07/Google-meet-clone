@@ -41,7 +41,7 @@ function JoinMetting({inMeeting ,setInMeeting , roomId}) {
     }, [inMeeting])
 
 
-    if (inMeeting) return  <ViewMeeting localStream={localStream} setLocalStream={setLocalStream} roomId={roomId} />
+    if (inMeeting) return  <ViewMeeting localStream={localStream}  roomId={roomId} />
 
 
     return ( 
@@ -79,8 +79,10 @@ function Video({localStream, style , givenId}) {
 }
 
 
-function ViewMeeting({localStream, setLocalStream, roomId}) { 
-    const [remoteStream , setRemoteStream] = useState(new MediaStream())
+function ViewMeeting({localStream , roomId}) { 
+    const [remoteStream , setRemoteStream] = useState(new MediaStream());
+    const [joinEventExecuted, setJoinEventExecuted] = useState(false);
+
     const servers = { 
         iceServers : [
           {
@@ -184,8 +186,11 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
     }
 
     async function init() { 
+        if (!joinEventExecuted) { 
+            socket.emit('joined', roomId)
+            setJoinEventExecuted(true)
+        }
         
-        socket.emit('joined', roomId)
         socketEvents(socket , peerConnection)
         
         
@@ -197,6 +202,7 @@ function ViewMeeting({localStream, setLocalStream, roomId}) {
 
     useEffect(() => { 
         init()
+
 
     }, [])
 
