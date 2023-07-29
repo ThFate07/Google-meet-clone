@@ -2,12 +2,15 @@ import { useState } from 'react'
 import './login.css'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios';
+import {  useSetRecoilState } from 'recoil';
+import authState from '../store/atom/atom';
 
 
 function Login() { 
     const [username , setUsername] = useState('');
     const [password , setPassword] = useState('');
     const [error , setError] = useState('')
+    const setAuth = useSetRecoilState(authState)
     const navigate = useNavigate();
 
     function handleClick() { 
@@ -16,12 +19,14 @@ function Login() {
             password
         }).then((response) => { 
             
-            localStorage.setItem('token' , response.data.token)
+            localStorage.setItem('token' , response.data.token);
+            setAuth(true);
             navigate('/dashboard');
         }).catch(res => { 
             setError(<p  className='error'>{res.response.data.message}</p>)
         })
     }
+    
     return ( 
         <div className="background">
 
