@@ -9,9 +9,6 @@ import { authState, tokenState } from "./store/atom/atom";
 import axios from "axios";
 import {
   RecoilRoot,
-  atom,
-  selector,
-  useRecoilState,
   useRecoilValue,
   useSetRecoilState,
 } from "recoil";

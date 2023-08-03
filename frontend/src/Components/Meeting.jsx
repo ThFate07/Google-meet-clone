@@ -27,17 +27,14 @@ function JoinMetting() {
   };
 
   async function init() {
-    setLocalStream(
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    );
+    setLocalStream(await navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
   }
 
   useEffect(() => {
     init();
-  }, [inMeeting]);
+  }, []);
 
-  if (inMeeting)
-    return <ViewMeeting localStream={localStream} roomId={roomId} />;
+  if (inMeeting) return <ViewMeeting localStream={localStream} roomId={roomId} inMeeting={inMeeting} />;
 
   return (
     <div className="background">
@@ -69,15 +66,7 @@ function JoinMetting() {
   );
 }
 
-function Video({ localStream, style, givenId }) {
-  useEffect(() => {
-    document.getElementById(givenId).srcObject = localStream;
-  }, [localStream]);
-
-  return <video id={givenId} style={style} autoPlay playsInline></video>;
-}
-
-function ViewMeeting({ localStream, roomId }) {
+function ViewMeeting({ localStream, roomId, inMeeting}) {
   const [remoteStream, setRemoteStream] = useState(new MediaStream());
   const [joinEventExecuted, setJoinEventExecuted] = useState(false);
   const servers = {
@@ -90,83 +79,102 @@ function ViewMeeting({ localStream, roomId }) {
       },
     ],
   };
-  const peerConnection = new RTCPeerConnection(servers);
+  let peerConnection = new RTCPeerConnection(servers)
   const URL = "http://localhost:4000";
   const socket = io(URL);
 
   const toggleCamera = async () => {
-    let videoTrack = localStream
-      .getTracks()
-      .find((track) => track.kind === "video");
-
+    const videoTrack = localStream.getTracks().find(track => track.kind === 'video')
     videoTrack.enabled = !videoTrack.enabled;
-    console.log(videoTrack.enabled, "after");
   };
 
   const toggleMic = async () => {
-    let audioTrack = localStream
-      .getTracks()
-      .find((track) => track.kind === "audio");
+    let audioTrack = localStream.getTracks().find((track) => track.kind === "audio");
 
     audioTrack.enabled = !audioTrack.enabled;
+
   };
 
+  
+  const addTrackToPeer = (localStream, pc) => { 
+    const tracks = localStream.getTracks();
+
+  
+    tracks.forEach((track) => {
+      pc.addTrack(track, localStream);
+    });
+  }
+
+  const handleDisconnect = () => { 
+    peerConnection.close();
+    setRemoteStream(new MediaStream())
+    socket.emit("disconnect");
+  }
+  
   async function createOffer(socket, peerConnection) {
+    
+    
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit("sdp-offer", peerConnection.localDescription, roomId);
       }
     };
 
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+  
+    return await peerConnection.createOffer();
+    
   }
 
-  function socketEvents(socket, peerConnection) {
+  function socketEvents(socket) {
+    socket.on("joined", async () => {
+      
+      
+      const offer = await createOffer(socket, peerConnection);
+      await peerConnection.setLocalDescription(offer);
+      
+    });
+
     socket.on("sdp-offer", async (offer) => {
       await peerConnection.setRemoteDescription(offer);
 
+      
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          
           socket.emit("sdp-answer", peerConnection.localDescription, roomId);
         }
       };
 
+      
       const answer = await peerConnection.createAnswer();
-
       await peerConnection.setLocalDescription(answer);
 
-      const newRemoteStream = new MediaStream();
-
-      // after establishing connection add video track to current window
-      peerConnection.getReceivers().forEach((reciver) => {
-        newRemoteStream.addTrack(reciver.track);
-      });
-      setRemoteStream(newRemoteStream);
     });
 
-    socket.on("joined", () => {
-      createOffer(socket, peerConnection);
+   
+
+    socket.on("sdp-answer", async (answer) => {
+      
+      await peerConnection.setRemoteDescription(answer);
+      
+      
     });
 
-    socket.on("sdp-answer", (answer) => {
-      peerConnection.ontrack = (e) => {
+    socket.on("disconnected", async () => {
+      
+      peerConnection.close()
+
+      const newPeerConnection = new RTCPeerConnection(servers)
+      addTrackToPeer(localStream, newPeerConnection)
+      newPeerConnection.ontrack = (e) => {
         setRemoteStream(e.streams[0]);
       };
+      peerConnection = newPeerConnection
 
-      peerConnection.setRemoteDescription(answer);
-    });
-
-    socket.on("disconnected", () => {
-      peerConnection.close();
-
-      peerConnection = new RTCPeerConnection(servers);
-
-      localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream);
-      });
-
+      
       setRemoteStream(new MediaStream());
+
+      
     });
   }
 
@@ -176,21 +184,25 @@ function ViewMeeting({ localStream, roomId }) {
       setJoinEventExecuted(true);
     }
 
-    socketEvents(socket, peerConnection);
+    socketEvents(socket);
 
-    localStream.getTracks().forEach((track) => {
-      peerConnection.addTrack(track, localStream);
-    });
+    addTrackToPeer(localStream, peerConnection)
+
+    peerConnection.ontrack = (e) => {
+      setRemoteStream(e.streams[0]);
+    };
+
   }
 
-  function handleDisconnect() {
-    peerConnection.close();
-    socket.emit("disconnect");
-  }
+  
 
   useEffect(() => {
-    init();
-  }, []);
+    if (inMeeting) {
+      init();
+
+    }
+
+  }, [inMeeting]);
 
 
   return (
@@ -200,8 +212,12 @@ function ViewMeeting({ localStream, roomId }) {
         <Video localStream={remoteStream} givenId={"user-2"} />
       </div>
       <div className="controls">
-        <ControlComponent id={"camera-btn"} image={cameraLogo} onClick={toggleCamera}/>
-        <ControlComponent id={"mic-btn"} image={micLogo} onClick={toggleMic}/>
+        <ControlComponent
+          id={"camera-btn"}
+          image={cameraLogo}
+          onClick={toggleCamera}
+        />
+        <ControlComponent id={"mic-btn"} image={micLogo} onClick={toggleMic} />
         <Link to={"/dashboard"} onClick={handleDisconnect}>
           <div className="control-container" id="leave-btn">
             <img src={phoneLogo}></img>
@@ -210,32 +226,40 @@ function ViewMeeting({ localStream, roomId }) {
       </div>
     </div>
   );
-
-
 }
 
-function ControlComponent(props) {
-    const [isOn, setIsON] = useState(true);
 
-    function handleClick() {
-      setIsON(!isOn);
-        props.onClick()
-    }
-    
-    return (
-      <div
-        className="control-container"
-        id={props.id}
-        onClick={handleClick}
-        style={
-          isOn
-            ? { backgroundColor: "rgb(179, 102, 249, .9)" }
-            : { backgroundColor: "rgb(255, 80, 80)" }
-        }
-      >
-        <img src={props.image}></img>
-      </div>
-    );
+function Video({ localStream, style, givenId }) {
+  useEffect(() => {
+    document.getElementById(givenId).srcObject = localStream;
+  }, [localStream]);
+
+  return <video id={givenId} style={style} autoPlay playsInline></video>;
+}
+
+
+function ControlComponent(props) {
+  const [isOn, setIsON] = useState(true);
+
+  function handleClick() {
+    setIsON(!isOn);
+    props.onClick();
+  }
+
+  return (
+    <div
+      className="control-container"
+      id={props.id}
+      onClick={handleClick}
+      style={
+        isOn
+          ? { backgroundColor: "rgb(179, 102, 249, .9)" }
+          : { backgroundColor: "rgb(255, 80, 80)" }
+      }
+    >
+      <img src={props.image}></img>
+    </div>
+  );
 }
 
 export default Meeting;
