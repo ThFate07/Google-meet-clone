@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-export function connectDB() { 
+function connectDB() { 
     try { 
         mongoose.connect('mongodb://127.0.0.1:27017/googlemeet')
     } catch  { 
@@ -8,3 +8,4 @@ export function connectDB() {
     }
 }
 
+module.exports = connectDB

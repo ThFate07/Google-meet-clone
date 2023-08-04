@@ -8,6 +8,7 @@ import phoneLogo from "/icons/phone.png";
 import { useRecoilValue } from "recoil";
 import { authState } from "../store/atom/atom";
 import { ErrorComponent } from "./DashBoard";
+import Peers from "../services/peerConnection";
 
 function Meeting() {
   const authValue = useRecoilValue(authState);
@@ -27,14 +28,23 @@ function JoinMetting() {
   };
 
   async function init() {
-    setLocalStream(await navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
+    setLocalStream(
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    );
   }
 
   useEffect(() => {
     init();
   }, []);
 
-  if (inMeeting) return <ViewMeeting localStream={localStream} roomId={roomId} inMeeting={inMeeting} />;
+  if (inMeeting)
+    return (
+      <ViewMeeting
+        localStream={localStream}
+        roomId={roomId}
+        inMeeting={inMeeting}
+      />
+    );
 
   return (
     <div className="background">
@@ -66,115 +76,56 @@ function JoinMetting() {
   );
 }
 
-function ViewMeeting({ localStream, roomId, inMeeting}) {
+function ViewMeeting({ localStream, roomId, inMeeting }) {
   const [remoteStream, setRemoteStream] = useState(new MediaStream());
   const [joinEventExecuted, setJoinEventExecuted] = useState(false);
-  const servers = {
-    iceServers: [
-      {
-        urls: [
-          "stun:stun1.l.google.com:19302",
-          "stun:stun2.l.google.com:19302",
-        ],
-      },
-    ],
-  };
-  let peerConnection = new RTCPeerConnection(servers)
   const URL = "http://localhost:4000";
   const socket = io(URL);
+  let peer;
 
   const toggleCamera = async () => {
-    const videoTrack = localStream.getTracks().find(track => track.kind === 'video')
+    const videoTrack = localStream
+      .getTracks()
+      .find((track) => track.kind === "video");
     videoTrack.enabled = !videoTrack.enabled;
   };
 
   const toggleMic = async () => {
-    let audioTrack = localStream.getTracks().find((track) => track.kind === "audio");
-
+    let audioTrack = localStream
+      .getTracks()
+      .find((track) => track.kind === "audio");
     audioTrack.enabled = !audioTrack.enabled;
-
   };
 
-  
-  const addTrackToPeer = (localStream, pc) => { 
-    const tracks = localStream.getTracks();
-
-  
-    tracks.forEach((track) => {
-      pc.addTrack(track, localStream);
-    });
-  }
-
-  const handleDisconnect = () => { 
-    peerConnection.close();
-    setRemoteStream(new MediaStream())
+  const handleDisconnect = () => {
+    peer.connection.close();
+    setRemoteStream(new MediaStream());
     socket.emit("disconnect");
-  }
-  
-  async function createOffer(socket, peerConnection) {
-    
-    
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit("sdp-offer", peerConnection.localDescription, roomId);
-      }
-    };
-
-  
-    return await peerConnection.createOffer();
-    
-  }
+  };
 
   function socketEvents(socket) {
     socket.on("joined", async () => {
-      
-      
-      const offer = await createOffer(socket, peerConnection);
-      await peerConnection.setLocalDescription(offer);
-      
+      await peer.createOffer();
     });
 
     socket.on("sdp-offer", async (offer) => {
-      await peerConnection.setRemoteDescription(offer);
-
-      
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          
-          socket.emit("sdp-answer", peerConnection.localDescription, roomId);
-        }
-      };
-
-      
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-
+      await peer.genAnswer(offer);
     });
 
-   
-
     socket.on("sdp-answer", async (answer) => {
-      
-      await peerConnection.setRemoteDescription(answer);
-      
-      
+      await peer.acceptAns(answer);
     });
 
     socket.on("disconnected", async () => {
-      
-      peerConnection.close()
+      peer.connection.close();
 
-      const newPeerConnection = new RTCPeerConnection(servers)
-      addTrackToPeer(localStream, newPeerConnection)
-      newPeerConnection.ontrack = (e) => {
+      peer = new Peers(localStream, socket, roomId);
+
+      peer.connection.ontrack = (e) => {
         setRemoteStream(e.streams[0]);
       };
-      peerConnection = newPeerConnection
 
-      
       setRemoteStream(new MediaStream());
-
-      
     });
   }
 
@@ -184,26 +135,19 @@ function ViewMeeting({ localStream, roomId, inMeeting}) {
       setJoinEventExecuted(true);
     }
 
+    peer = new Peers(localStream, socket, roomId);
+
     socketEvents(socket);
-
-    addTrackToPeer(localStream, peerConnection)
-
-    peerConnection.ontrack = (e) => {
+    peer.connection.ontrack = (e) => {
       setRemoteStream(e.streams[0]);
     };
-
   }
-
-  
 
   useEffect(() => {
     if (inMeeting) {
       init();
-
     }
-
   }, [inMeeting]);
-
 
   return (
     <div className="">
@@ -228,7 +172,6 @@ function ViewMeeting({ localStream, roomId, inMeeting}) {
   );
 }
 
-
 function Video({ localStream, style, givenId }) {
   useEffect(() => {
     document.getElementById(givenId).srcObject = localStream;
@@ -236,7 +179,6 @@ function Video({ localStream, style, givenId }) {
 
   return <video id={givenId} style={style} autoPlay playsInline></video>;
 }
-
 
 function ControlComponent(props) {
   const [isOn, setIsON] = useState(true);

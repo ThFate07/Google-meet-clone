@@ -1,12 +1,14 @@
-import { connectDB } from './db/connectDB';
-import router from './routes/route'
-
+const connectDB = require('./db/connectDB')
+const router = require('./routes/route')
+const cors = require("cors");
+const bodyParser = require('body-parser')
 
 const express = require('express');
 
 const app = express()
 
-
+app.use(bodyParser.json())
+app.use(cors())
 
 // connect to database
 connectDB()

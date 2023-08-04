@@ -1,4 +1,8 @@
-export const auth = (req , res , next) => {
+const jwt = require("jsonwebtoken");
+require("dotenv").config({path: '../.env'});
+const secretKeyUser = 'thisismysecretkeyyoudontknowthis'
+
+const auth = (req , res , next) => {
     const token = req.headers.authorization;
 
     if (!token) { 
@@ -16,3 +20,5 @@ export const auth = (req , res , next) => {
     })
 
 }
+
+module.exports = auth
