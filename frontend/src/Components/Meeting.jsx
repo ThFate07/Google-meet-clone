@@ -10,7 +10,8 @@ import { authState } from "../store/atom/atom";
 import { ErrorComponent } from "./DashBoard";
 import Peers from "../services/peerConnection";
 import Meetings from "../css/Meetings.module.css";
-import dashboard from '../css/dashboard.module.css'
+import dashboard from '../css/dashboard.module.css';
+
 function Meeting() {
   const authValue = useRecoilValue(authState);
 
@@ -18,17 +19,18 @@ function Meeting() {
 }
 
 function JoinMetting() {
-  const [localStream, setLocalStream] = useState(null);
+  const [localStream, setLocalStream] = useState(new MediaStream());
   const [inMeeting, setInMeeting] = useState(false);
   const { roomId } = useParams();
 
-  const style = {
-    backgroundColor: "black",
-    width: "512px",
-    height: "400px"
-  };
+  // const style = {
+  //   backgroundColor: "black",
+  //   width: "512px",
+  //   height: "400px"
+  // };
 
   async function init() {
+    
     setLocalStream(
       // turn audio on
       await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -62,7 +64,7 @@ function JoinMetting() {
           
           <Video
             localStream={localStream}
-            style={style}
+            givenClass={dashboard.hairCheckVideo}
             givenId={Meetings.hairCheckVideo}
           />
           <div style={{
@@ -85,7 +87,7 @@ function JoinMetting() {
 function ViewMeeting({ localStream, roomId, inMeeting }) {
   const [remoteStream, setRemoteStream] = useState(new MediaStream());
   const [joinEventExecuted, setJoinEventExecuted] = useState(false);
-  const [styles, setStyles] = useState();
+  const [frameClass, setFrameClass] = useState();
 
   const URL = "http://localhost:4000";
   const socket = io(URL);
@@ -113,13 +115,13 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
 
   function socketEvents(socket) {
     socket.on("joined", async () => {
-      setStyles(Meetings.smallFrame);
+      setFrameClass(Meetings.smallFrame);
 
       await peer.current.createOffer();
     });
 
     socket.on("sdp-offer", async (offer) => {
-      setStyles(Meetings.smallFrame);
+      setFrameClass(Meetings.smallFrame);
       await peer.current.genAnswer(offer);
     });
 
@@ -128,7 +130,7 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
     });
 
     socket.on("disconnected", async () => {
-      setStyles();
+      setFrameClass();
       peer.current.connection.close();
 
       peer.current = new Peers(localStream, socket, roomId);
@@ -166,7 +168,7 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
   return (
     <div className="">
       <div className={Meetings.videos}>
-        <Video localStream={localStream} style={styles} givenId={"user-1"} />
+        <Video localStream={localStream} givenClass={frameClass} givenId={"user-1"} />
         <Video localStream={remoteStream} givenId={"user-2"} />
       </div>
       <div className="controls">
@@ -186,12 +188,12 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
   );
 }
 
-function Video({ localStream, style, givenId }) {
+function Video({ localStream, givenClass, givenId }) {
   useEffect(() => {
     document.getElementById(givenId).srcObject = localStream;
   }, [localStream]);
 
-  return <video id={givenId} style={style} autoPlay playsInline></video>;
+  return <video id={givenId} className={givenClass} autoPlay playsInline></video>;
 }
 
 function ControlComponent(props) {
