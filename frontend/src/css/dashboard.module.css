@@ -1,0 +1,90 @@
+.dashboardFont { 
+    font-family: "Google Sans Display","Roboto","Arial",sans-serif;
+}
+
+
+.background { 
+    height: 100vh;
+    background-image: linear-gradient(to bottom right, #9e88ff , #5942bf);
+    color: white;
+}
+
+.gridContainer { 
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    margin: 0 auto;
+    height: 100vh;
+}
+
+h3 { 
+    font-size: 40px;
+    margin-bottom: 20px;
+}
+
+.left > div > p { 
+    margin-bottom: 40px;
+    font-weight: bold;
+}
+
+.left { 
+    width: 61%;
+}
+
+.btnContainer { 
+    display: flex;
+    gap: 20px;
+}
+
+.icon { 
+    position: absolute;
+    left: 10px;
+}
+
+.meetingbtn { 
+    background-color: rgb(73, 41, 105);
+    border: 2px solid rgb(73, 41, 105);
+    position: relative;
+    padding: 0.6em;
+    padding-left: 32px;
+    border-radius: 6px;
+}
+
+.btnname { 
+    padding-left: 10px;
+}
+
+
+
+.meetingInput { 
+    background-color: transparent;
+    border: 2px solid rgb(73, 41, 105);
+    padding: 10px;
+    height: 47.19px;
+    border-radius: 7px;
+    outline: none;
+}
+
+.meetingInput::placeholder { 
+    color: white;
+}
+
+.meetingInput:hover { 
+    outline: none;
+}
+
+.joinbtn { 
+    color: rgb(73, 41, 105);
+    margin-left: 10px;
+    font-size: 25px;
+}
+
+.isActive { 
+    display: none;
+}
+
+.meetingInput:focus ~ .isActive { 
+    display: inline;
+}

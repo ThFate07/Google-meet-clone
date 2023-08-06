@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { Link, useParams } from "react-router-dom";
 import cameraLogo from "/icons/camera.png";
@@ -9,7 +9,8 @@ import { useRecoilValue } from "recoil";
 import { authState } from "../store/atom/atom";
 import { ErrorComponent } from "./DashBoard";
 import Peers from "../services/peerConnection";
-
+import Meetings from "../css/Meetings.module.css";
+import dashboard from '../css/dashboard.module.css'
 function Meeting() {
   const authValue = useRecoilValue(authState);
 
@@ -29,7 +30,8 @@ function JoinMetting() {
 
   async function init() {
     setLocalStream(
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      // turn audio on
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     );
   }
 
@@ -47,7 +49,7 @@ function JoinMetting() {
     );
 
   return (
-    <div className="background">
+    <div className={`background ${dashboard.dashboardFont}`}>
       <div
         style={{
           display: "flex",
@@ -79,9 +81,11 @@ function JoinMetting() {
 function ViewMeeting({ localStream, roomId, inMeeting }) {
   const [remoteStream, setRemoteStream] = useState(new MediaStream());
   const [joinEventExecuted, setJoinEventExecuted] = useState(false);
+  const [styles, setStyles] = useState();
+
   const URL = "http://localhost:4000";
   const socket = io(URL);
-  let peer;
+  let peer = useRef(new Peers(localStream, socket, roomId));
 
   const toggleCamera = async () => {
     const videoTrack = localStream
@@ -98,30 +102,34 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
   };
 
   const handleDisconnect = () => {
-    peer.connection.close();
+    peer.current.connection.close();
     setRemoteStream(new MediaStream());
     socket.emit("disconnect");
   };
 
   function socketEvents(socket) {
     socket.on("joined", async () => {
-      await peer.createOffer();
+      setStyles(Meetings.smallFrame);
+
+      await peer.current.createOffer();
     });
 
     socket.on("sdp-offer", async (offer) => {
-      await peer.genAnswer(offer);
+      setStyles(Meetings.smallFrame);
+      await peer.current.genAnswer(offer);
     });
 
     socket.on("sdp-answer", async (answer) => {
-      await peer.acceptAns(answer);
+      await peer.current.acceptAns(answer);
     });
 
     socket.on("disconnected", async () => {
-      peer.connection.close();
+      setStyles();
+      peer.current.connection.close();
 
-      peer = new Peers(localStream, socket, roomId);
+      peer.current = new Peers(localStream, socket, roomId);
 
-      peer.connection.ontrack = (e) => {
+      peer.current.connection.ontrack = (e) => {
         setRemoteStream(e.streams[0]);
       };
 
@@ -135,10 +143,11 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
       setJoinEventExecuted(true);
     }
 
-    peer = new Peers(localStream, socket, roomId);
+    // peer = new Peers(localStream, socket, roomId);
 
     socketEvents(socket);
-    peer.connection.ontrack = (e) => {
+
+    peer.current.connection.ontrack = (e) => {
       setRemoteStream(e.streams[0]);
     };
   }
@@ -151,8 +160,8 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
 
   return (
     <div className="">
-      <div className=" background gap">
-        <Video localStream={localStream} givenId={"user-1"} />
+      <div className={Meetings.videos}>
+        <Video localStream={localStream} style={styles} givenId={"user-1"} />
         <Video localStream={remoteStream} givenId={"user-2"} />
       </div>
       <div className="controls">
@@ -177,7 +186,7 @@ function Video({ localStream, style, givenId }) {
     document.getElementById(givenId).srcObject = localStream;
   }, [localStream]);
 
-  return <video id={givenId} style={style} autoPlay playsInline></video>;
+  return <video id={givenId} className={style} autoPlay playsInline></video>;
 }
 
 function ControlComponent(props) {

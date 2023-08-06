@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import authState, { tokenState } from "../store/atom/atom";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+
 function Landing() {
   return (
     <>
@@ -10,7 +11,7 @@ function Landing() {
   );
 }
 
-function NavBar() {
+export function NavBar() {
   const authValue = useRecoilValue(authState);
   const tokenSetter = useSetRecoilState(tokenState);
 
@@ -18,7 +19,7 @@ function NavBar() {
     localStorage.removeItem("token");
     tokenSetter("");
   }
-  
+
   return (
     <div className="nav">
       <div className="flex-container">
