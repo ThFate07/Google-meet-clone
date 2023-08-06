@@ -23,15 +23,15 @@ function JoinMetting() {
   const { roomId } = useParams();
 
   const style = {
-    height: "500px",
-    width: "50%",
     backgroundColor: "black",
+    width: "512px",
+    height: "400px"
   };
 
   async function init() {
     setLocalStream(
       // turn audio on
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     );
   }
 
@@ -50,29 +50,33 @@ function JoinMetting() {
 
   return (
     <div className={`background ${dashboard.dashboardFont}`}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "30px",
-        }}
-      >
+      <div style={{
+        textAlign: 'center'
+      }}>
+        <h1 style={{
+          marginBottom: '30px',
+          fontSize: '25px'
+        }}>  Welcome to meeting {roomId}</h1>
         <div>
-          <p>Hair check.</p>
+          <span>Hair check.</span>
+          
           <Video
             localStream={localStream}
             style={style}
-            givenId={"check-hair"}
+            givenId={Meetings.hairCheckVideo}
           />
-          <button onClick={() => init()}>Use Cam</button>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}>
+
+            <button onClick={() => init()}>Camera not working? press me </button>
+            <button className="dash-btn" onClick={() => setInMeeting(true)}>
+              Join Meeting
+            </button>
+          </div>
         </div>
-        <div>
-          <p>Welcome to meeting {roomId}</p>
-          <button className="dash-btn" onClick={() => setInMeeting(true)}>
-            Join Meeting
-          </button>
-        </div>
+        
       </div>
     </div>
   );
@@ -128,6 +132,7 @@ function ViewMeeting({ localStream, roomId, inMeeting }) {
       peer.current.connection.close();
 
       peer.current = new Peers(localStream, socket, roomId);
+
 
       peer.current.connection.ontrack = (e) => {
         setRemoteStream(e.streams[0]);
@@ -186,7 +191,7 @@ function Video({ localStream, style, givenId }) {
     document.getElementById(givenId).srcObject = localStream;
   }, [localStream]);
 
-  return <video id={givenId} className={style} autoPlay playsInline></video>;
+  return <video id={givenId} style={style} autoPlay playsInline></video>;
 }
 
 function ControlComponent(props) {
